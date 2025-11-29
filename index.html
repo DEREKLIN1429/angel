@@ -331,17 +331,17 @@
 
             <div class="modal-group" style="background: #eef7ff; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
                 <label style="color:var(--primary-color);">5. Google Script ID</label>
-                <input type="text" id="set-script-id" class="modal-input" placeholder="Paste ID or URL here">
+                <input type="text" id="set-script-id" class="modal-input" placeholder="ID or URL">
             </div>
 
             <div class="modal-group" style="background: #eef7ff; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
                 <label style="color:var(--primary-color);">6. Google Sheet ID</label>
-                <input type="text" id="set-sheet-id" class="modal-input" placeholder="Paste ID or URL here">
+                <input type="text" id="set-sheet-id" class="modal-input" placeholder="ID or URL">
             </div>
 
             <div class="modal-group" style="background: #eef7ff; padding: 10px; border-radius: 8px;">
                 <label style="color:var(--primary-color);">7. Google Drive Folder ID</label>
-                <input type="text" id="set-folder-id" class="modal-input" placeholder="Paste ID or URL here">
+                <input type="text" id="set-folder-id" class="modal-input" placeholder="ID or URL">
             </div>
 
             <button class="btn-main btn-save" onclick="saveSettings()">Save Settings (儲存設定)</button>
@@ -350,12 +350,17 @@
 
 <script>
     // ================= 初始化 =================
-    // [修改點 1] 預設密碼改為 1111
     const DEFAULT_PASS = "1111"; 
     
-    // 請在這裡填入你的預設 ID (如果使用者清除了瀏覽器快取，會用這些值)
-    const DEFAULT_SCRIPT_ID = ""; 
-    const DEFAULT_SHEET_ID = "";
+    // [修改點 1] 已將你的網址轉換為 ID 並寫死在這裡
+    // Script ID: AKfycbw8wcYe7jDDXarfwZaie5DQ4YybdGzwla9cy-XgLR__txp9cXeWRwqIVB4P50qOudVkFQ
+    const DEFAULT_SCRIPT_ID = "AKfycbw8wcYe7jDDXarfwZaie5DQ4YybdGzwla9cy-XgLR__txp9cXeWRwqIVB4P50qOudVkFQ"; 
+    
+    // Sheet ID: 1GuY79OPiuoWU6P1d9vZfbhJKlIBFzhLruTvH80zeAbs
+    const DEFAULT_SHEET_ID = "1GuY79OPiuoWU6P1d9vZfbhJKlIBFzhLruTvH80zeAbs";
+
+    // Folder ID: 1Cj8lDay4faYwzhaXswsCo7x2W3XcUwX4
+    const DEFAULT_FOLDER_ID = "1Cj8lDay4faYwzhaXswsCo7x2W3XcUwX4";
 
     let processedImageBase64 = ""; 
     let recognition;
@@ -370,14 +375,19 @@
     let snapshotText = ""; 
 
     window.onload = function() {
-        // 如果是舊用戶，密碼是舊的，這裡可以強制更新 (非必須，但建議)
-        if(localStorage.getItem("app_password") === "1234") {
-            localStorage.setItem("app_password", DEFAULT_PASS);
-        }
+        // [修改點 2] 強制更新：每次開啟時，都將預設值寫入 localStorage
+        // 這樣可以防止使用者有舊的設定殘留
+        localStorage.setItem("app_password", DEFAULT_PASS);
+        localStorage.setItem("cfg_script_id", DEFAULT_SCRIPT_ID);
+        localStorage.setItem("cfg_sheet_id", DEFAULT_SHEET_ID);
+        localStorage.setItem("cfg_folder_id", DEFAULT_FOLDER_ID);
+        
+        // 確保其他設定也有預設值
+        if(!localStorage.getItem("cfg_timeout")) localStorage.setItem("cfg_timeout", "20");
+        if(!localStorage.getItem("cfg_warning")) localStorage.setItem("cfg_warning", "5");
+        if(!localStorage.getItem("cfg_ratio")) localStorage.setItem("cfg_ratio", "9/16");
+        if(!localStorage.getItem("cfg_lang")) localStorage.setItem("cfg_lang", "cmn-Hant-TW");
 
-        if(!localStorage.getItem("app_password")) {
-            localStorage.setItem("app_password", DEFAULT_PASS);
-        }
         const isLoggedIn = localStorage.getItem("isLoggedIn");
         if(isLoggedIn === "true") {
             showApp();
@@ -438,17 +448,14 @@
     function extractId(input) {
         if (!input) return "";
         input = input.trim();
-        // 處理 Script URL
         if (input.includes("script.google.com")) {
             const match = input.match(/\/s\/([a-zA-Z0-9-_]+)\/exec/);
             return match ? match[1] : input;
         }
-        // 處理 Sheet URL
         if (input.includes("docs.google.com") && input.includes("/spreadsheets")) {
             const match = input.match(/\/d\/([a-zA-Z0-9-_]+)/);
             return match ? match[1] : input;
         }
-        // 處理 Drive URL
         if (input.includes("drive.google.com")) {
             const match = input.match(/\/folders\/([a-zA-Z0-9-_]+)/);
             return match ? match[1] : input;
@@ -486,27 +493,25 @@
 
     function loadSettingsToUI() {
         document.getElementById('set-password').value = localStorage.getItem("app_password");
-        // [修改點 2] 預設 20 秒
         document.getElementById('set-timeout').value = localStorage.getItem("cfg_timeout") || "20";
-        // [修改點 3] 預設 5 秒
         document.getElementById('set-warning').value = localStorage.getItem("cfg_warning") || "5";
         
         const savedLang = localStorage.getItem("cfg_lang") || "cmn-Hant-TW";
         document.getElementById('set-lang').value = savedLang;
         document.getElementById('main-lang').value = savedLang;
         
-        // [修改點 4] 預設 9/16
         document.getElementById('set-ratio').value = localStorage.getItem("cfg_ratio") || "9/16";
         
+        // 這裡會讀取我們強制寫入的預設值
         document.getElementById('set-script-id').value = localStorage.getItem("cfg_script_id") || DEFAULT_SCRIPT_ID;
         document.getElementById('set-sheet-id').value = localStorage.getItem("cfg_sheet_id") || DEFAULT_SHEET_ID;
-        document.getElementById('set-folder-id').value = localStorage.getItem("cfg_folder_id") || "";
+        document.getElementById('set-folder-id').value = localStorage.getItem("cfg_folder_id") || DEFAULT_FOLDER_ID;
     }
 
     function applySettings() {
-        const timeout = localStorage.getItem("cfg_timeout") || "20"; // 預設 20
+        const timeout = localStorage.getItem("cfg_timeout") || "20"; 
         document.getElementById('display-timeout').innerText = timeout;
-        const ratio = localStorage.getItem("cfg_ratio") || "9/16"; // 預設 9/16
+        const ratio = localStorage.getItem("cfg_ratio") || "9/16"; 
         const container = document.getElementById('preview-container');
         const tag = document.getElementById('ratio-display-tag');
         
@@ -541,10 +546,9 @@
     function processImageWithCanvas(img) {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        // [修改點 4] 預設 9/16
         const ratioStr = localStorage.getItem("cfg_ratio") || "9/16";
         
-        let targetRatio = 9/16; // 預設 9/16
+        let targetRatio = 9/16; 
         let isFull = false;
 
         if(ratioStr === "FULL") isFull = true;
@@ -618,7 +622,6 @@
             snapshotText += " ";
         }
 
-        // [修改點 2 & 3] 讀取設定，如果沒有則使用新的預設值
         const timeoutSec = parseInt(localStorage.getItem("cfg_timeout") || "20");
         const warningSec = parseInt(localStorage.getItem("cfg_warning") || "5");
         const purpleSec = warningSec + 5; 
@@ -721,7 +724,6 @@
         const noteInput = document.getElementById('noteInput');
         noteInput.classList.remove('anim-red', 'anim-purple', 'anim-green');
         
-        // [修改點 2]
         const originalTime = localStorage.getItem("cfg_timeout") || "20";
         document.getElementById('display-timeout').innerText = originalTime;
     }
@@ -751,11 +753,8 @@
 
     function saveToCloud() {
         const note = document.getElementById('noteInput').value;
-        const folderId = localStorage.getItem("cfg_folder_id") || "";
-        
-        // 修正：一定要傳送 Sheet ID
+        const folderId = localStorage.getItem("cfg_folder_id") || DEFAULT_FOLDER_ID;
         const sheetId = localStorage.getItem("cfg_sheet_id") || DEFAULT_SHEET_ID;
-
         const scriptId = localStorage.getItem("cfg_script_id") || DEFAULT_SCRIPT_ID;
         const scriptUrl = `https://script.google.com/macros/s/${scriptId}/exec`;
 
@@ -804,19 +803,17 @@
 
     function viewExcel() {
         const sheetId = localStorage.getItem("cfg_sheet_id") || DEFAULT_SHEET_ID;
-        if(!sheetId) { alert("Please set Sheet ID first!"); openSettings(); return; }
         const url = `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
         window.open(url, '_blank');
     }
 
     function viewDriveFolder() {
-        const folderId = localStorage.getItem("cfg_folder_id");
+        const folderId = localStorage.getItem("cfg_folder_id") || DEFAULT_FOLDER_ID;
         if(folderId && folderId.trim() !== "") {
             window.open("https://drive.google.com/drive/folders/" + folderId, '_blank');
         } else {
-            if(confirm("Folder ID not set. Open Google Drive Root?\n(尚未設定資料夾 ID，要開啟雲端硬碟根目錄嗎？)")) {
-                window.open("https://drive.google.com/drive/my-drive", '_blank');
-            }
+            // Fallback
+            window.open("https://drive.google.com/drive/my-drive", '_blank');
         }
     }
 </script>
