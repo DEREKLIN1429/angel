@@ -328,8 +328,19 @@
                 <div class="hint-text">* Applies auto-crop unless set to FULL.</div>
             </div>
 
-            <div style="text-align: center; color: var(--primary-color); font-size: 0.9em; margin-top: 15px;">
-                <p>✅ Cloud Paths are Locked (System Mode)</p>
+            <div class="modal-group" style="background: #eef7ff; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+                <label style="color:var(--primary-color);">5. Google Script ID/URL</label>
+                <input type="text" id="set-script-id" class="modal-input" placeholder="Paste ID or URL here">
+            </div>
+
+            <div class="modal-group" style="background: #eef7ff; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+                <label style="color:var(--primary-color);">6. Google Sheet ID/URL</label>
+                <input type="text" id="set-sheet-id" class="modal-input" placeholder="Paste ID or URL here">
+            </div>
+
+            <div class="modal-group" style="background: #eef7ff; padding: 10px; border-radius: 8px;">
+                <label style="color:var(--primary-color);">7. Google Drive Folder ID/URL</label>
+                <input type="text" id="set-folder-id" class="modal-input" placeholder="Paste ID or URL here">
             </div>
 
             <button class="btn-main btn-save" onclick="saveSettings()">Save Settings (儲存設定)</button>
@@ -340,11 +351,10 @@
     // ================= 初始化 =================
     const DEFAULT_PASS = "1234"; 
     
-    // --- 這裡是你要求的寫死路徑 (FIXED PATHS) ---
-    // 我已經將你提供的連結轉換成對應的 ID 並固定於此。
-    const FIXED_SCRIPT_ID = "AKfycbw7FDLF8CQCOZ_ymj4rs8qbmfysb-K4tpaixcT8WaCqND2Lhe2GiaP3imzlro7fAEYAgA";
-    const FIXED_SHEET_ID = "1nLrtWHWr07_U-ieWSp8dqVA7nOZxyhAMhSwslDG_znM";
-    const FIXED_FOLDER_ID = "1IjQ_x50b8OGVOTOtsTEVVa3jWODhJleh";
+    // --- 這裡設定預設值，但使用者可以在設定介面修改 ---
+    const DEFAULT_SCRIPT_ID = "AKfycbw7FDLF8CQCOZ_ymj4rs8qbmfysb-K4tpaixcT8WaCqND2Lhe2GiaP3imzlro7fAEYAgA";
+    const DEFAULT_SHEET_ID = "1nLrtWHWr07_U-ieWSp8dqVA7nOZxyhAMhSwslDG_znM";
+    const DEFAULT_FOLDER_ID = "1IjQ_x50b8OGVOTOtsTEVVa3jWODhJleh";
 
     let processedImageBase64 = ""; 
     let recognition;
@@ -362,6 +372,12 @@
         if(!localStorage.getItem("app_password")) {
             localStorage.setItem("app_password", DEFAULT_PASS);
         }
+        
+        // --- 初始化預設 ID 到 LocalStorage (如果沒設定過的話) ---
+        if(!localStorage.getItem("cfg_script_id")) localStorage.setItem("cfg_script_id", DEFAULT_SCRIPT_ID);
+        if(!localStorage.getItem("cfg_sheet_id")) localStorage.setItem("cfg_sheet_id", DEFAULT_SHEET_ID);
+        if(!localStorage.getItem("cfg_folder_id")) localStorage.setItem("cfg_folder_id", DEFAULT_FOLDER_ID);
+
         const isLoggedIn = localStorage.getItem("isLoggedIn");
         if(isLoggedIn === "true") {
             showApp();
@@ -419,7 +435,7 @@
         localStorage.setItem("cfg_lang", val);
     }
 
-    // 雖然現在寫死了，但保留此函數以防未來需要
+    // ID 擷取函式：讓使用者可以貼上完整網址
     function extractId(input) {
         if (!input) return "";
         input = input.trim();
@@ -444,6 +460,11 @@
         const warning = document.getElementById('set-warning').value;
         const lang = document.getElementById('set-lang').value; 
         const ratio = document.getElementById('set-ratio').value;
+        
+        // 取得輸入的 ID (包含網址自動轉換)
+        const scriptId = extractId(document.getElementById('set-script-id').value);
+        const sheetId = extractId(document.getElementById('set-sheet-id').value);
+        const folderId = extractId(document.getElementById('set-folder-id').value);
 
         if(newPass.trim() === "") { alert("Password cannot be empty!"); return; }
 
@@ -452,6 +473,11 @@
         localStorage.setItem("cfg_warning", warning);
         localStorage.setItem("cfg_lang", lang);
         localStorage.setItem("cfg_ratio", ratio);
+        
+        // 儲存雲端路徑設定
+        localStorage.setItem("cfg_script_id", scriptId);
+        localStorage.setItem("cfg_sheet_id", sheetId);
+        localStorage.setItem("cfg_folder_id", folderId);
         
         document.getElementById('main-lang').value = lang;
 
@@ -468,6 +494,11 @@
         document.getElementById('set-lang').value = savedLang;
         document.getElementById('main-lang').value = savedLang;
         document.getElementById('set-ratio').value = localStorage.getItem("cfg_ratio") || "4/3";
+        
+        // 載入 ID 設定
+        document.getElementById('set-script-id').value = localStorage.getItem("cfg_script_id") || DEFAULT_SCRIPT_ID;
+        document.getElementById('set-sheet-id').value = localStorage.getItem("cfg_sheet_id") || DEFAULT_SHEET_ID;
+        document.getElementById('set-folder-id').value = localStorage.getItem("cfg_folder_id") || DEFAULT_FOLDER_ID;
     }
 
     function applySettings() {
@@ -720,11 +751,12 @@
     function saveToCloud() {
         const note = document.getElementById('noteInput').value;
         
-        // --- 使用寫死的 Folder ID ---
-        const folderId = FIXED_FOLDER_ID;
+        // --- 從 LocalStorage 讀取 Folder ID ---
+        const folderId = localStorage.getItem("cfg_folder_id") || DEFAULT_FOLDER_ID;
         
-        // --- 使用寫死的 Script ID ---
-        const scriptUrl = `https://script.google.com/macros/s/${FIXED_SCRIPT_ID}/exec`;
+        // --- 從 LocalStorage 讀取 Script ID ---
+        const scriptId = localStorage.getItem("cfg_script_id") || DEFAULT_SCRIPT_ID;
+        const scriptUrl = `https://script.google.com/macros/s/${scriptId}/exec`;
 
         if(!processedImageBase64 && !note) {
             alert("Empty! Please take a photo or write a note."); return;
@@ -760,18 +792,19 @@
     }
 
     function viewExcel() {
-        // --- 使用寫死的 Sheet ID ---
-        const url = `https://docs.google.com/spreadsheets/d/${FIXED_SHEET_ID}/edit`;
+        // --- 從 LocalStorage 讀取 Sheet ID ---
+        const sheetId = localStorage.getItem("cfg_sheet_id") || DEFAULT_SHEET_ID;
+        const url = `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
         window.open(url, '_blank');
     }
 
     function viewDriveFolder() {
-        // --- 使用寫死的 Folder ID ---
-        const folderId = FIXED_FOLDER_ID;
+        // --- 從 LocalStorage 讀取 Folder ID ---
+        const folderId = localStorage.getItem("cfg_folder_id") || DEFAULT_FOLDER_ID;
         if(folderId && folderId.trim() !== "") {
             window.open("https://drive.google.com/drive/folders/" + folderId, '_blank');
         } else {
-            // Fallback (理論上不會發生，因為已經寫死 ID 了)
+            // Fallback
             if(confirm("Folder ID not set. Open Google Drive Root?\n(尚未設定資料夾 ID，要開啟雲端硬碟根目錄嗎？)")) {
                 window.open("https://drive.google.com/drive/my-drive", '_blank');
             }
@@ -781,5 +814,3 @@
 
 </body>
 </html>
-
-
