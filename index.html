@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Angel Notes Recorder (重點事項紀錄)</title>
+    <title>Key Notes Recorder (重點事項紀錄)</title>
     <style>
         :root {
             --primary-color: #007bff;
@@ -112,6 +112,7 @@
             background-repeat: no-repeat; background-size: 20px 20px; pointer-events: none; margin: 5px;
         }
         
+        /* 比例設定 */
         .ratio-4-3 { aspect-ratio: 4/3; }
         .ratio-16-9 { aspect-ratio: 16/9; }
         .ratio-9-16 { aspect-ratio: 9/16; }
@@ -230,7 +231,7 @@
         <div class="header">
             <div class="header-btn" onclick="logout()" title="Lock / Logout (鎖定/登出)">🔒</div>
             <div class="header-title">
-                <h2>Angel Notes Recorder<br>重點事項紀錄</h2>
+                <h2>Key Notes Recorder<br>重點事項紀錄</h2>
             </div>
             <div class="header-btn" onclick="openSettings()" title="Settings (設定)">⚙️</div>
         </div>
@@ -242,8 +243,8 @@
                 <button class="btn-half btn-gallery" onclick="triggerGallery()">🖼️ Gallery (相簿)</button>
             </div>
             
-            <div id="preview-container" class="ratio-4-3" onclick="triggerCam()" title="Click to take photo">
-                <div class="ratio-tag" id="ratio-display-tag">Ratio: 4:3</div>
+            <div id="preview-container" class="ratio-9-16" onclick="triggerCam()" title="Click to take photo">
+                <div class="ratio-tag" id="ratio-display-tag">Ratio: 9:16</div>
                 <span class="placeholder">Tap here to Take Photo<br>(點擊此處拍照)</span>
                 <img id="preview-img">
             </div>
@@ -272,7 +273,7 @@
                     🎤 Start Voice (開始錄音)
                 </button>
                 <div style="text-align: right; font-size: 0.9em; color: #555; margin-top: 8px; font-weight: bold;">
-                    Time left: <span id="display-timeout" style="color:#d63384; font-size:1.1em;">10</span> s
+                    Time left: <span id="display-timeout" style="color:#d63384; font-size:1.1em;">20</span> s
                 </div>
             </div>
         </div>
@@ -293,23 +294,23 @@
             
             <div class="modal-group" style="background: #f9f9f9; padding: 10px; border-radius: 8px; border: 1px dashed #ccc;">
                 <label style="color:#d63384;">🔑 Login Password (修改登入密碼)</label>
-                <input type="text" id="set-password" class="modal-input" placeholder="Current: 1234">
+                <input type="text" id="set-password" class="modal-input" placeholder="Current: 1111">
             </div>
 
             <div class="modal-group">
                 <label>1. Voice Timeout (錄音總秒數)</label>
-                <input type="number" id="set-timeout" class="modal-input" value="10">
+                <input type="number" id="set-timeout" class="modal-input" value="20">
             </div>
 
             <div class="modal-group">
                 <label style="color:red;">2. Red Frame Warning (紅框閃爍警示秒數)</label>
-                <input type="number" id="set-warning" class="modal-input" value="3" placeholder="e.g. 3">
+                <input type="number" id="set-warning" class="modal-input" value="5" placeholder="e.g. 5">
             </div>
 
             <div class="modal-group">
                 <label>3. Language (語音辨識語言)</label>
                 <select id="set-lang" class="modal-input" onchange="syncLanguage('settings')">
-                    <option value="cmn-Hant-TW">Traditional Chinese (繁體中文)</option>
+                    <option value="cmn-Hant-TW" selected>Traditional Chinese (繁體中文)</option>
                     <option value="en-US">English (英文)</option>
                     <option value="ja-JP">Japanese (日文)</option>
                     <option value="hi-IN">Hindi (印地語)</option>
@@ -319,9 +320,9 @@
             <div class="modal-group">
                 <label>4. Photo Aspect Ratio (照片比例)</label>
                 <select id="set-ratio" class="modal-input">
+                    <option value="9/16" selected>9:16 (Vertical / 直式)</option>
                     <option value="4/3">4:3 (Standard)</option>
                     <option value="16/9">16:9 (Wide)</option>
-                    <option value="9/16">9:16 (Vertical / 直式)</option>
                     <option value="1/1">1:1 (Square)</option>
                     <option value="FULL">FULL (Original / 全畫面)</option>
                 </select>
@@ -349,8 +350,10 @@
 
 <script>
     // ================= 初始化 =================
-    const DEFAULT_PASS = "1234"; 
-    // 請在這裡填入你的預設值 (如果使用者清除了瀏覽器快取，會用這些值)
+    // [修改點 1] 預設密碼改為 1111
+    const DEFAULT_PASS = "1111"; 
+    
+    // 請在這裡填入你的預設 ID (如果使用者清除了瀏覽器快取，會用這些值)
     const DEFAULT_SCRIPT_ID = ""; 
     const DEFAULT_SHEET_ID = "";
 
@@ -367,6 +370,11 @@
     let snapshotText = ""; 
 
     window.onload = function() {
+        // 如果是舊用戶，密碼是舊的，這裡可以強制更新 (非必須，但建議)
+        if(localStorage.getItem("app_password") === "1234") {
+            localStorage.setItem("app_password", DEFAULT_PASS);
+        }
+
         if(!localStorage.getItem("app_password")) {
             localStorage.setItem("app_password", DEFAULT_PASS);
         }
@@ -478,21 +486,27 @@
 
     function loadSettingsToUI() {
         document.getElementById('set-password').value = localStorage.getItem("app_password");
-        document.getElementById('set-timeout').value = localStorage.getItem("cfg_timeout") || "10";
-        document.getElementById('set-warning').value = localStorage.getItem("cfg_warning") || "3";
+        // [修改點 2] 預設 20 秒
+        document.getElementById('set-timeout').value = localStorage.getItem("cfg_timeout") || "20";
+        // [修改點 3] 預設 5 秒
+        document.getElementById('set-warning').value = localStorage.getItem("cfg_warning") || "5";
+        
         const savedLang = localStorage.getItem("cfg_lang") || "cmn-Hant-TW";
         document.getElementById('set-lang').value = savedLang;
         document.getElementById('main-lang').value = savedLang;
-        document.getElementById('set-ratio').value = localStorage.getItem("cfg_ratio") || "4/3";
+        
+        // [修改點 4] 預設 9/16
+        document.getElementById('set-ratio').value = localStorage.getItem("cfg_ratio") || "9/16";
+        
         document.getElementById('set-script-id').value = localStorage.getItem("cfg_script_id") || DEFAULT_SCRIPT_ID;
         document.getElementById('set-sheet-id').value = localStorage.getItem("cfg_sheet_id") || DEFAULT_SHEET_ID;
         document.getElementById('set-folder-id').value = localStorage.getItem("cfg_folder_id") || "";
     }
 
     function applySettings() {
-        const timeout = localStorage.getItem("cfg_timeout") || "10";
+        const timeout = localStorage.getItem("cfg_timeout") || "20"; // 預設 20
         document.getElementById('display-timeout').innerText = timeout;
-        const ratio = localStorage.getItem("cfg_ratio") || "4/3";
+        const ratio = localStorage.getItem("cfg_ratio") || "9/16"; // 預設 9/16
         const container = document.getElementById('preview-container');
         const tag = document.getElementById('ratio-display-tag');
         
@@ -527,14 +541,16 @@
     function processImageWithCanvas(img) {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        const ratioStr = localStorage.getItem("cfg_ratio") || "4/3";
+        // [修改點 4] 預設 9/16
+        const ratioStr = localStorage.getItem("cfg_ratio") || "9/16";
         
-        let targetRatio = 4/3;
+        let targetRatio = 9/16; // 預設 9/16
         let isFull = false;
 
         if(ratioStr === "FULL") isFull = true;
         else if(ratioStr === "16/9") targetRatio = 16/9;
         else if(ratioStr === "9/16") targetRatio = 9/16;
+        else if(ratioStr === "4/3") targetRatio = 4/3;
         else if(ratioStr === "1/1") targetRatio = 1;
 
         let srcW = img.width; let srcH = img.height;
@@ -602,8 +618,9 @@
             snapshotText += " ";
         }
 
-        const timeoutSec = parseInt(localStorage.getItem("cfg_timeout") || "10");
-        const warningSec = parseInt(localStorage.getItem("cfg_warning") || "3");
+        // [修改點 2 & 3] 讀取設定，如果沒有則使用新的預設值
+        const timeoutSec = parseInt(localStorage.getItem("cfg_timeout") || "20");
+        const warningSec = parseInt(localStorage.getItem("cfg_warning") || "5");
         const purpleSec = warningSec + 5; 
         
         timeLeft = timeoutSec;
@@ -704,7 +721,8 @@
         const noteInput = document.getElementById('noteInput');
         noteInput.classList.remove('anim-red', 'anim-purple', 'anim-green');
         
-        const originalTime = localStorage.getItem("cfg_timeout") || "10";
+        // [修改點 2]
+        const originalTime = localStorage.getItem("cfg_timeout") || "20";
         document.getElementById('display-timeout').innerText = originalTime;
     }
 
@@ -731,7 +749,6 @@
 
     function closeStatusModal() { document.getElementById('status-modal').style.display = 'none'; }
 
-    // [核心修正] 傳送資料到 GAS
     function saveToCloud() {
         const note = document.getElementById('noteInput').value;
         const folderId = localStorage.getItem("cfg_folder_id") || "";
@@ -750,7 +767,7 @@
         btn.disabled = true;
         showStatus('loading', 'Uploading...', '資料上傳中...');
 
-        // 修正：Payload 加入 sheetId
+        // Payload
         const data = { 
             note: note, 
             image: processedImageBase64, 
