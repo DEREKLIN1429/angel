@@ -350,8 +350,9 @@
 <script>
     // ================= 初始化 =================
     const DEFAULT_PASS = "1234"; 
-    const DEFAULT_SCRIPT_ID = "AKfycbzTDioUw8L5vZ9H3rUEB-df_sSmJ4kg86NFraktwmU4-qtiESh_u_tZPnyIsUOW9LaK";
-    const DEFAULT_SHEET_ID = "1GcnAkIHAhnVjrH9bO9TQbdTUwQT17XtyQWUPh7WSTLA";
+    // 請在這裡填入你的預設值 (如果使用者清除了瀏覽器快取，會用這些值)
+    const DEFAULT_SCRIPT_ID = ""; 
+    const DEFAULT_SHEET_ID = "";
 
     let processedImageBase64 = ""; 
     let recognition;
@@ -359,8 +360,8 @@
     // 錄音狀態
     let isRecording = false; 
     let isManualStop = false; 
-    let voiceTimer = null;         
-    let countdownInterval = null;  
+    let voiceTimer = null;          
+    let countdownInterval = null;   
     let punctuationTimer = null; 
     let timeLeft = 0; 
     let snapshotText = ""; 
@@ -429,14 +430,17 @@
     function extractId(input) {
         if (!input) return "";
         input = input.trim();
+        // 處理 Script URL
         if (input.includes("script.google.com")) {
             const match = input.match(/\/s\/([a-zA-Z0-9-_]+)\/exec/);
             return match ? match[1] : input;
         }
-        if (input.includes("docs.google.com")) {
+        // 處理 Sheet URL
+        if (input.includes("docs.google.com") && input.includes("/spreadsheets")) {
             const match = input.match(/\/d\/([a-zA-Z0-9-_]+)/);
             return match ? match[1] : input;
         }
+        // 處理 Drive URL
         if (input.includes("drive.google.com")) {
             const match = input.match(/\/folders\/([a-zA-Z0-9-_]+)/);
             return match ? match[1] : input;
@@ -568,7 +572,7 @@
         }
     }
 
-    // ================= 語音功能 (修正：標點遺失問題) =================
+    // ================= 語音功能 =================
     function toggleVoice() {
         if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
             alert("Browser not supported"); return;
@@ -593,7 +597,6 @@
         document.getElementById('voiceBtn').classList.add('recording');
         document.getElementById('voiceBtn').innerText = "🛑 Stop";
         
-        // 建立快照
         snapshotText = document.getElementById('noteInput').value;
         if(snapshotText.length > 0 && !snapshotText.endsWith(" ")) {
             snapshotText += " ";
@@ -646,18 +649,15 @@
             
             if(currentSessionText.trim().length > 0) {
                 punctuationTimer = setTimeout(() => {
-                    // 計時器觸發：停頓1秒後切斷
                     recognition.stop(); 
                 }, 1000);
             }
         };
 
-        // 5. 強制不中斷 & 自動重啟邏輯 (含補標點)
         recognition.onend = function() {
             if(punctuationTimer) clearTimeout(punctuationTimer);
 
             if (isRecording && !isManualStop && timeLeft > 0) {
-                // 檢查是否需要補標點
                 let currentVal = document.getElementById('noteInput').value.trim();
                 if(currentVal.length > 0) {
                     const lastChar = currentVal.slice(-1);
@@ -670,7 +670,6 @@
                     }
                 }
 
-                // 更新快照
                 snapshotText = document.getElementById('noteInput').value;
                 if(snapshotText.length > 0 && !snapshotText.endsWith(" ")) {
                     snapshotText += " "; 
@@ -732,9 +731,14 @@
 
     function closeStatusModal() { document.getElementById('status-modal').style.display = 'none'; }
 
+    // [核心修正] 傳送資料到 GAS
     function saveToCloud() {
         const note = document.getElementById('noteInput').value;
         const folderId = localStorage.getItem("cfg_folder_id") || "";
+        
+        // 修正：一定要傳送 Sheet ID
+        const sheetId = localStorage.getItem("cfg_sheet_id") || DEFAULT_SHEET_ID;
+
         const scriptId = localStorage.getItem("cfg_script_id") || DEFAULT_SCRIPT_ID;
         const scriptUrl = `https://script.google.com/macros/s/${scriptId}/exec`;
 
@@ -746,7 +750,13 @@
         btn.disabled = true;
         showStatus('loading', 'Uploading...', '資料上傳中...');
 
-        const data = { note: note, image: processedImageBase64, folderId: folderId };
+        // 修正：Payload 加入 sheetId
+        const data = { 
+            note: note, 
+            image: processedImageBase64, 
+            folderId: folderId,
+            sheetId: sheetId 
+        };
 
         fetch(scriptUrl, {
             method: 'POST',
@@ -754,17 +764,21 @@
         })
         .then(r => r.json())
         .then(res => {
-            showStatus('success', 'Upload Success!', '上傳成功！');
-            document.getElementById('noteInput').value = "";
-            processedImageBase64 = "";
-            document.getElementById('preview-img').style.display = 'none';
-            document.querySelector('.placeholder').style.display = 'block';
-            applySettings();
-            setTimeout(() => { closeStatusModal(); }, 2000);
+            if(res.status === 'success'){
+                showStatus('success', 'Upload Success!', '上傳成功！');
+                document.getElementById('noteInput').value = "";
+                processedImageBase64 = "";
+                document.getElementById('preview-img').style.display = 'none';
+                document.querySelector('.placeholder').style.display = 'block';
+                applySettings();
+                setTimeout(() => { closeStatusModal(); }, 2000);
+            } else {
+                throw new Error(res.message || 'Unknown Error');
+            }
         })
         .catch(e => {
             console.error(e);
-            showStatus('error', 'Upload Failed', '上傳失敗，請檢查網路。');
+            showStatus('error', 'Upload Failed', '失敗原因: ' + e.message);
         })
         .finally(() => {
             btn.disabled = false;
@@ -773,6 +787,7 @@
 
     function viewExcel() {
         const sheetId = localStorage.getItem("cfg_sheet_id") || DEFAULT_SHEET_ID;
+        if(!sheetId) { alert("Please set Sheet ID first!"); openSettings(); return; }
         const url = `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
         window.open(url, '_blank');
     }
@@ -791,4 +806,3 @@
 
 </body>
 </html>
-
