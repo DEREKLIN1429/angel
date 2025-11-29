@@ -352,9 +352,10 @@
     const DEFAULT_PASS = "1234"; 
     
     // --- 這裡設定預設值，但使用者可以在設定介面修改 ---
-    const DEFAULT_SCRIPT_ID = "AKfycbw7FDLF8CQCOZ_ymj4rs8qbmfysb-K4tpaixcT8WaCqND2Lhe2GiaP3imzlro7fAEYAgA";
-    const DEFAULT_SHEET_ID = "1nLrtWHWr07_U-ieWSp8dqVA7nOZxyhAMhSwslDG_znM";
-    const DEFAULT_FOLDER_ID = "1IjQ_x50b8OGVOTOtsTEVVa3jWODhJleh";
+    // Update: 2025-02-18 更新了新的路徑 ID
+    const DEFAULT_SCRIPT_ID = "AKfycbw8wcYe7jDDXarfwZaie5DQ4YybdGzwla9cy-XgLR__txp9cXeWRwqIVB4P50qOudVkFQ";
+    const DEFAULT_SHEET_ID = "1GuY79OPiuoWU6P1d9vZfbhJKlIBFzhLruTvH80zeAbs";
+    const DEFAULT_FOLDER_ID = "1Cj8lDay4faYwzhaXswsCo7x2W3XcUwX4";
 
     let processedImageBase64 = ""; 
     let recognition;
@@ -495,7 +496,7 @@
         document.getElementById('main-lang').value = savedLang;
         document.getElementById('set-ratio').value = localStorage.getItem("cfg_ratio") || "4/3";
         
-        // 載入 ID 設定
+        // 載入 ID 設定，若 LocalStorage 沒資料則使用新的 Default 常數
         document.getElementById('set-script-id').value = localStorage.getItem("cfg_script_id") || DEFAULT_SCRIPT_ID;
         document.getElementById('set-sheet-id').value = localStorage.getItem("cfg_sheet_id") || DEFAULT_SHEET_ID;
         document.getElementById('set-folder-id').value = localStorage.getItem("cfg_folder_id") || DEFAULT_FOLDER_ID;
